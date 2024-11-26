@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Menu, Target } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface NavbarProps {
   scrollToSection: (sectionId: string) => void;
 }
 
-const Navbar = ({ scrollToSection }: NavbarProps) => {
+const Navbar = ({ }: NavbarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleNavigation = (path: string) => {
     navigate(path);

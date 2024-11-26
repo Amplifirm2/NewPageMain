@@ -1,27 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useInView } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Globe, 
   FileText, 
   ArrowRight,
   ArrowLeft,
-  Search,
   Target,
   Rocket,
-  ChevronDown,
   Building2,
   Lightbulb,
   DollarSign,
   Users,
   TrendingUp,
   CheckCircle,
-  ExternalLink,
-  HelpCircle,
   AlertCircle,
   Link,
   Sparkles,
-  Info,
-  Zap
+  Info
 } from 'lucide-react';
 
 interface FormData {
@@ -93,7 +88,7 @@ const BusinessAnalyzer = () => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showUrlTooltip, setShowUrlTooltip] = useState(false);
+  const [, setShowUrlTooltip] = useState(false);
   const [urlValidated, setUrlValidated] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     businessDescription: '',
@@ -105,99 +100,6 @@ const BusinessAnalyzer = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
-  const CreativeBackground = () => {
-    const containerRef = useRef(null);
-    const isInView = useInView(containerRef, { once: true });
-
-    return (
-      <motion.div 
-        ref={containerRef}
-        className="absolute inset-0 overflow-hidden pointer-events-none"
-      >
-        {/* Particle Background */}
-        {isInView && [...Array(50)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-white/10"
-            style={{
-              width: `${Math.random() * 5 + 2}px`,
-              height: `${Math.random() * 5 + 2}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              x: [
-                Math.random() * 50 - 25, 
-                Math.random() * 50 - 25, 
-                Math.random() * 50 - 25
-              ],
-              y: [
-                Math.random() * 50 - 25, 
-                Math.random() * 50 - 25, 
-                Math.random() * 50 - 25
-              ],
-              opacity: [0.2, 0.5, 0.2]
-            }}
-            transition={{
-              duration: Math.random() * 10 + 5,
-              repeat: Infinity,
-              repeatType: 'reverse',
-              delay: Math.random() * 3
-            }}
-          />
-        ))}
-
-        {/* Dynamic Gradient Overlay */}
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-[#13091D] via-[#1F1129] to-[#13091D] opacity-90"
-          animate={{
-            backgroundPosition: [
-              '0% 0%', 
-              '100% 100%', 
-              '0% 100%', 
-              '100% 0%'
-            ]
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            repeatType: 'reverse'
-          }}
-        />
-
-        {/* Floating Geometric Shapes */}
-        {[
-          { color: '#FF6B6B', shape: 'circle' },
-          { color: '#8B5CF6', shape: 'triangle' },
-          { color: '#3B82F6', shape: 'square' }
-        ].map((item, idx) => (
-          <motion.div
-            key={idx}
-            className="absolute opacity-20 blur-2xl"
-            style={{
-              width: `${Math.random() * 300 + 200}px`,
-              height: `${Math.random() * 300 + 200}px`,
-              left: `${Math.random() * 70}%`,
-              top: `${Math.random() * 70}%`,
-              backgroundColor: item.color,
-              borderRadius: item.shape === 'circle' ? '50%' : 
-                           item.shape === 'triangle' ? '50% 50% 0 0' : '0'
-            }}
-            animate={{
-              scale: [0.8, 1.2, 0.8],
-              rotate: [0, 360, 0],
-              opacity: [0.1, 0.3, 0.1]
-            }}
-            transition={{
-              duration: 15 + idx * 5,
-              repeat: Infinity,
-              repeatType: 'reverse'
-            }}
-          />
-        ))}
-      </motion.div>
-    );
-  };
 
   const getProgress = (text: string) => {
     return Math.min((text.length / MIN_CHARS) * 100, 100);
@@ -270,58 +172,6 @@ const BusinessAnalyzer = () => {
   const getCurrentQuestion = () => QUESTIONS[currentStep];
 
   // Improved Tooltip Component with fixed hover behavior
-  const Tooltip = ({ 
-    content, 
-    children, 
-    position = 'top' 
-  }: { 
-    content: string, 
-    children: React.ReactNode, 
-    position?: 'top' | 'right' | 'bottom' | 'left' 
-  }) => {
-    const [isHovering, setIsHovering] = useState(false);
-
-    const positionClasses = {
-      top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-      right: 'left-full top-1/2 -translate-y-1/2 ml-2',
-      bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
-      left: 'right-full top-1/2 -translate-y-1/2 mr-2'
-    };
-
-    const arrowPositionClasses = {
-      top: 'bottom-[-8px] left-1/2 -translate-x-1/2 rotate-45',
-      right: 'left-[-8px] top-1/2 -translate-y-1/2 rotate-[-90deg]',
-      bottom: 'top-[-8px] left-1/2 -translate-x-1/2 rotate-[225deg]',
-      left: 'right-[-8px] top-1/2 -translate-y-1/2 rotate-90'
-    };
-
-    return (
-      <div 
-        className="group relative inline-block"
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-      >
-        {children}
-        {isHovering && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className={`absolute z-50 bg-[#1F1129] text-white text-sm 
-              rounded-xl p-4 w-64 shadow-xl border border-white/10 
-              ${positionClasses[position]}`}
-          >
-            <div 
-              className={`absolute w-4 h-4 bg-[#1F1129] transform 
-                border-l border-t border-white/10 
-                ${arrowPositionClasses[position]}`} 
-            />
-            <p className="relative z-10">{content}</p>
-          </motion.div>
-        )}
-      </div>
-    );
-  };
 
   // Improved QuestionHelp Component
   const QuestionHelp = ({ content }: { content: string }) => {
