@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -17,9 +18,33 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
+
+interface ScoreRingProps {
+  score: number;
+  size?: number;
+  strokeWidth?: number;
+  color: string;
+}
+
+interface InsightCardProps {
+  title: string;
+  items?: string[];
+  icon: LucideIcon;
+  color: string;
+  className?: string;
+}
+
+interface MetricCardProps {
+  label: string;
+  value: string | number;
+  change?: number;
+  icon: LucideIcon;
+  color: string;
+}
 
 // Animated Score Ring Component
-const ScoreRing = ({ score, size = 200, strokeWidth = 8, color }) => {
+const ScoreRing = ({ score, size = 200, strokeWidth = 8, color }: ScoreRingProps) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = (score / 10) * circumference;
@@ -75,7 +100,7 @@ const ScoreRing = ({ score, size = 200, strokeWidth = 8, color }) => {
   );
 };
 
-const InsightCard = ({ title, items = [], icon: Icon, color, className = "" }) => {
+const InsightCard = ({ title, items = [], icon: Icon, color, className = "" }: InsightCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -122,7 +147,7 @@ const InsightCard = ({ title, items = [], icon: Icon, color, className = "" }) =
               exit={{ opacity: 0 }}
               className="space-y-3"
             >
-              {items.slice(0, 2).map((item, i) => (
+              {items.slice(0, 2).map((item: string, i: number) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
@@ -161,7 +186,7 @@ const InsightCard = ({ title, items = [], icon: Icon, color, className = "" }) =
               exit={{ opacity: 0, height: 0 }}
               className="space-y-3"
             >
-              {items.map((item, i) => (
+              {items.map((item: string, i: number) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
@@ -188,29 +213,31 @@ const InsightCard = ({ title, items = [], icon: Icon, color, className = "" }) =
   );
 };
 
-const MetricCard = ({ label, value, change, icon: Icon, color }) => (
-  <motion.div
-    whileHover={{ y: -5 }}
-    className="p-6 bg-[#1F1129]/50 rounded-xl border border-white/10"
-  >
-    <div className="flex justify-between items-start mb-4">
-      <div className="flex items-center gap-2 text-white/60">
-        <Icon className="w-4 h-4" />
-        <span>{label}</span>
-      </div>
-      {change && (
-        <div className={`flex items-center gap-1 text-sm
-          ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
-          {change > 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-          {Math.abs(change)}%
+const MetricCard = ({ label, value, change, icon: Icon, color }: MetricCardProps) => {
+    return (
+      <motion.div
+        whileHover={{ y: -5 }}
+        className="p-6 bg-[#1F1129]/50 rounded-xl border border-white/10"
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2 text-white/60">
+            <Icon className="w-4 h-4" />
+            <span>{label}</span>
+          </div>
+          {change && (
+            <div className={`flex items-center gap-1 text-sm
+              ${change > 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {change > 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+              {Math.abs(change)}%
+            </div>
+          )}
         </div>
-      )}
-    </div>
-    <div className="text-3xl font-bold" style={{ color }}>
-      {value}
-    </div>
-  </motion.div>
-);
+        <div className="text-3xl font-bold" style={{ color }}>
+          {value}
+        </div>
+      </motion.div>
+    );
+  };
 
 const AnalysisResults = () => {
   const location = useLocation();
@@ -534,49 +561,46 @@ const AnalysisResults = () => {
             />
           </div>
 
-          {/* Recommendations Section */}
-          {recommendations.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-8 bg-[#1F1129]/50 rounded-xl p-8 border border-white/10"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-12 h-12 rounded-xl bg-[#FF6B6B]/20 
-                    flex items-center justify-center"
-                >
-                  <Rocket className="w-6 h-6 text-[#FF6B6B]" />
-                </motion.div>
-                <h3 className="text-2xl font-bold text-white">Action Plan</h3>
-              </div>
-              
-              <div className="grid gap-4">
-                {recommendations.map((rec, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="p-4 bg-white/5 rounded-xl border border-white/10 
-                      hover:border-[#FF6B6B]/30 transition-all duration-300 group"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-[#FF6B6B]/20 flex items-center 
-                        justify-center flex-shrink-0 mt-1">
-                        <span className="text-[#FF6B6B] font-semibold">{i + 1}</span>
-                      </div>
-                      <p className="text-white/80 group-hover:text-white transition-colors">
-                        {rec}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
+  {/* Recommendations Section */}
+{recommendations.length > 0 && (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="mt-8 bg-[#1F1129]/50 rounded-xl p-8 border border-white/10"
+  >
+    <div className="flex items-center gap-3 mb-6">
+      <motion.div
+        whileHover={{ rotate: 360 }}
+        transition={{ duration: 0.5 }}
+        className="w-12 h-12 rounded-xl bg-[#FF6B6B]/20 flex items-center justify-center"
+      >
+        <Rocket className="w-6 h-6 text-[#FF6B6B]" />
+      </motion.div>
+      <h3 className="text-2xl font-bold text-white">Action Plan</h3>
+    </div>
+    
+    <div className="grid gap-4">
+      {recommendations.map((rec: string, i: number) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.1 }}
+          className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-[#FF6B6B]/30 transition-all duration-300 group"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-lg bg-[#FF6B6B]/20 flex items-center justify-center flex-shrink-0 mt-1">
+              <span className="text-[#FF6B6B] font-semibold">{i + 1}</span>
+            </div>
+            <p className="text-white/80 group-hover:text-white transition-colors">
+              {rec}
+            </p>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  </motion.div>
+)}
         </div>
       </div>
     </div>

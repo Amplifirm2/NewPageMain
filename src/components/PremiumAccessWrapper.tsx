@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -14,7 +14,11 @@ import {
 
 const STORAGE_KEY = 'amplifirm_qualified_status';
 
-const PremiumAccessWrapper = ({ children }) => {
+interface PremiumAccessWrapperProps {
+  children: ReactNode;
+}
+
+const PremiumAccessWrapper = ({ children }: PremiumAccessWrapperProps): JSX.Element => {
   const navigate = useNavigate();
   const [isQualified, setIsQualified] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

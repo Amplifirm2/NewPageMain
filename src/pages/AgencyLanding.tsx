@@ -1,7 +1,7 @@
 // src/pages/AgencyLanding.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { 
   CheckCircle, 
   Rocket, 
@@ -2993,7 +2993,7 @@ return (
 );
         }
 export default AgencyLanding;
-function setCompletedSteps(arg0: never[]) {
+function setCompletedSteps(_arg0: never[]) {
   throw new Error('Function not implemented.');
 }
 

@@ -18,7 +18,11 @@ const AnalysisLoading = () => {
   ];
 
   useEffect(() => {
-    const { analysisType, formData, websiteUrl } = location.state || {};
+    const { analysisType, formData, websiteUrl } = location.state as { 
+      analysisType?: string; 
+      formData?: any; 
+      websiteUrl?: string 
+    } || {};
     
     console.log('Loading page received:', { analysisType, formData, websiteUrl });
     
@@ -69,20 +73,26 @@ const AnalysisLoading = () => {
             });
           }, 1000);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Analysis error:', error);
-        setError(error.message);
-        
-        if (isMounted) {
-          setTimeout(() => {
-            navigate('/analysis-results', {
-              state: {
-                analysis: null,
-                loading: false,
-                error: error.message
-              }
-            });
-          }, 1000);
+        if (error instanceof Error) {
+          setError(error.message);
+          navigate('/analysis-results', {
+            state: {
+              analysis: null,
+              loading: false,
+              error: error.message
+            }
+          });
+        } else {
+          setError('An unknown error occurred');
+          navigate('/analysis-results', {
+            state: {
+              analysis: null,
+              loading: false,
+              error: 'An unknown error occurred'
+            }
+          });
         }
       }
     };
@@ -111,7 +121,7 @@ const AnalysisLoading = () => {
       clearInterval(progressInterval);
       clearInterval(stepInterval);
     };
-  }, []);
+  }, [navigate, location, steps]);
 
   return (
     <div className="min-h-screen bg-[#13091D] flex items-center justify-center relative overflow-hidden">
