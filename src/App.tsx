@@ -5,6 +5,9 @@ import BusinessAnalyzer from './pages/BusinessAnalyzer';
 import Navbar from './components/Navbar';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import AnalysisLoading from './pages/AnalysisLoading';
+import AnalysisResults from './pages/AnalysisResults';
+import PremiumAccessWrapper from './components/PremiumAccessWrapper';
 
 function App() {
   const scrollToSection = (sectionId: string) => {
@@ -26,7 +29,21 @@ function App() {
         <Routes>
           <Route path="/" element={<AgencyLanding />} />
           <Route path="/coming-soon" element={<ComingSoon />} />
-          <Route path="/business-analyzer" element={<BusinessAnalyzer />} />
+          <Route path="/business-analyzer" element={
+            <PremiumAccessWrapper>
+              <BusinessAnalyzer />
+            </PremiumAccessWrapper>
+          } />
+          <Route path="/analysis-loading" element={
+            <PremiumAccessWrapper>
+              <AnalysisLoading />
+            </PremiumAccessWrapper>
+          } />
+          <Route path="/analysis-results" element={
+            <PremiumAccessWrapper>
+              <AnalysisResults />
+            </PremiumAccessWrapper>
+          } />
         </Routes>
       </div>
     </Router>

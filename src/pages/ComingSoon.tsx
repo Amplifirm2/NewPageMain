@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Rocket, Target, ArrowLeft, ChevronRight, 
   Star, Send, CheckCircle, Sparkles } from 'lucide-react';
+import PremiumAccessWrapper from '../components/PremiumAccessWrapper';
 
 const ComingSoon = () => {
   const [email, setEmail] = useState('');
@@ -362,7 +363,7 @@ const ComingSoon = () => {
 
 
            <motion.button
-             onClick={goBack}
+             onClick={PremiumAccessWrapper}
              whileHover={{ scale: 1.05 }}
              whileTap={{ scale: 0.95 }}
              className="px-8 py-4 border border-white/10 rounded-xl text-white/60

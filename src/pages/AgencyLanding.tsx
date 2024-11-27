@@ -1,7 +1,7 @@
 // src/pages/AgencyLanding.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   CheckCircle, 
   Rocket, 
@@ -25,6 +25,8 @@ import {
   Heart,
   TrendingUp
 } from 'lucide-react';
+import SuccessModal from '../components/SuccessModal';
+
 
 //for vercel test
 
@@ -45,8 +47,11 @@ interface FormErrors {
   [key: string]: string;
 }
 
+
+
 const AgencyLanding = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState<FormData>({
     agencyName: '',
     contactName: '',
@@ -60,10 +65,23 @@ const AgencyLanding = () => {
     description: ''
   });
 
+  useEffect(() => {
+    if (location.state?.scrollTo) {
+      const element = document.getElementById(location.state.scrollTo);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [location]);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+ 
+
+  
 
   const SHEET_BEST_API = "https://api.sheetbest.com/sheets/48d32295-81a8-4cc3-9b07-c24af21e03b4";
 
@@ -173,10 +191,11 @@ const AgencyLanding = () => {
       }));
       return;
     }
-
+  
     setIsSubmitting(true);
-
+  
     try {
+      // Submit to API
       const response = await fetch(SHEET_BEST_API, {
         method: 'POST',
         headers: {
@@ -197,12 +216,29 @@ const AgencyLanding = () => {
           Status: "New Lead"
         })
       });
-
+  
       if (!response.ok) {
         throw new Error('Submission failed');
       }
-
+  
+      // Store qualification status in localStorage
+      const qualificationData = {
+        qualified: true,
+        timestamp: Date.now(),
+        formData: {
+          agencyName: formData.agencyName,
+          email: formData.email,
+          services: formData.services
+        }
+      };
+      
+      localStorage.setItem('amplifirm_qualified_status', JSON.stringify(qualificationData));
+  
+      // Show success state and modal
       setIsSuccess(true);
+      setShowSuccessModal(true);
+  
+      // Reset form data
       setFormData({
         agencyName: '',
         contactName: '',
@@ -215,10 +251,22 @@ const AgencyLanding = () => {
         yearsInBusiness: '',
         description: ''
       });
-
+  
+      // Reset current step
+      setCurrentStep(0);
+      setCompletedSteps([]);
+  
     } catch (error) {
       console.error('Submission error:', error);
-      setErrors({ submit: 'Failed to submit form. Please try again.' });
+      setErrors({ 
+        submit: error instanceof Error ? error.message : 'Failed to submit form. Please try again.' 
+      });
+      
+      // Optionally scroll to error message
+      const errorElement = document.getElementById('error-message');
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth' });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -431,71 +479,72 @@ return (
       </motion.div>
 
       {/* CTA Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
-        className="flex flex-col sm:flex-row justify-center gap-6 mb-16"
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 1.2 }}
+  className="flex flex-col sm:flex-row justify-center gap-6 mb-16"
+>
+  <motion.button
+    onClick={() => scrollToSection('signup-form')}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    className="group relative px-8 py-4 rounded-xl font-semibold text-lg overflow-hidden"
+  >
+    <motion.div
+      className="absolute inset-0 bg-gradient-to-r from-[#FF6B6B] to-[#FF8F8F]"
+      animate={{
+        backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+      }}
+      transition={{ duration: 5, repeat: Infinity }}
+    />
+    <motion.div
+      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity
+        bg-gradient-to-r from-[#FF8F8F] to-[#FF6B6B]"
+      animate={{
+        backgroundPosition: ['100% 50%', '0% 50%', '100% 50%']
+      }}
+      transition={{ duration: 5, repeat: Infinity }}
+    />
+    <div className="relative flex items-center gap-2 text-white">
+      <Target className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+      <span>Get Your Growth Score</span>
+      <motion.span
+        animate={{ x: [0, 5, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
       >
-        <motion.button
-          onClick={() => navigate('/business-analyzer')}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="group relative px-8 py-4 rounded-xl font-semibold text-lg overflow-hidden"
-        >
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-[#FF6B6B] to-[#FF8F8F]"
-            animate={{
-              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
-            }}
-            transition={{ duration: 5, repeat: Infinity }}
-          />
-          <motion.div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity
-              bg-gradient-to-r from-[#FF8F8F] to-[#FF6B6B]"
-            animate={{
-              backgroundPosition: ['100% 50%', '0% 50%', '100% 50%']
-            }}
-            transition={{ duration: 5, repeat: Infinity }}
-          />
-          <div className="relative flex items-center gap-2 text-white">
-            <Target className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
-            <span>Get Your Growth Score</span>
-            <motion.span
-              animate={{ x: [0, 5, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              →
-            </motion.span>
-          </div>
-        </motion.button>
+        →
+      </motion.span>
+    </div>
+  </motion.button>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="relative px-8 py-4 rounded-xl font-semibold text-lg overflow-hidden
-            group border border-white/10"
-        >
-          <motion.div
-            className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors"
-          />
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-            animate={{
-              x: ['-100%', '100%'],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              repeatDelay: 1
-            }}
-          />
-          <div className="relative flex items-center gap-2 text-white">
-            <Send className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            <span>See How It Works</span>
-          </div>
-        </motion.button>
-      </motion.div>
+  <motion.button
+    onClick={() => scrollToSection('how-it-works')}
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    className="relative px-8 py-4 rounded-xl font-semibold text-lg overflow-hidden
+      group border border-white/10"
+  >
+    <motion.div
+      className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors"
+    />
+    <motion.div
+      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+      animate={{
+        x: ['-100%', '100%'],
+      }}
+      transition={{
+        duration: 1.5,
+        repeat: Infinity,
+        repeatDelay: 1
+      }}
+    />
+    <div className="relative flex items-center gap-2 text-white">
+      <Send className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+      <span>See How It Works</span>
+    </div>
+  </motion.button>
+</motion.div>
 
       {/* Trust Markers */}
       <motion.div
@@ -1019,33 +1068,7 @@ return (
       ))}
     </div>
 
-    {/* Bottom CTA */}
-    <motion.button
-      onClick={() => scrollToSection('signup-form')}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      className="relative group px-8 py-4 rounded-xl bg-[#FF6B6B] text-white font-semibold 
-        overflow-hidden mt-12 mx-auto block"
-    >
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-[#FF6B6B] to-[#FF8F8F]"
-        animate={{
-          backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
-        }}
-        transition={{ duration: 5, repeat: Infinity }}
-      />
-      
-      <span className="relative flex items-center gap-2">
-        <Target className="w-5 h-5" />
-        Get Started Now
-        <motion.span
-          animate={{ x: [0, 4, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          →
-        </motion.span>
-      </span>
-    </motion.button>
+  
   </div>
 </section>
 
@@ -2961,6 +2984,11 @@ return (
 </motion.div>
   </div>
 </footer>
+
+<SuccessModal 
+      isOpen={showSuccessModal}
+      onClose={() => setShowSuccessModal(false)}
+    />
 
 </div>
 );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Globe, 
   FileText, 
@@ -90,6 +91,7 @@ const BusinessAnalyzer = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [, setShowUrlTooltip] = useState(false);
   const [urlValidated, setUrlValidated] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     businessDescription: '',
     businessModel: '',
@@ -152,21 +154,39 @@ const BusinessAnalyzer = () => {
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+    }
     
     if (analysisType === 'website') {
       if (!urlValidated) {
         setShowUrlTooltip(true);
         return;
       }
-    } else if (!validateStep()) {
-      return;
+  
+      setIsAnalyzing(true);
+      // Navigate to loading page with website data
+      navigate('/analysis-loading', {
+        state: {
+          analysisType: 'website',
+          websiteUrl: websiteUrl
+        }
+      });
+    } else {
+      // For manual input
+      if (!validateStep()) {
+        return;
+      }
+  
+      setIsAnalyzing(true);
+      // Navigate to loading page with form data
+      navigate('/analysis-loading', {
+        state: {
+          analysisType: 'manual',
+          formData: formData
+        }
+      });
     }
-    
-    setIsAnalyzing(true);
-    // Add your analysis logic here
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsAnalyzing(false);
   };
 
   const getCurrentQuestion = () => QUESTIONS[currentStep];
@@ -635,10 +655,7 @@ const BusinessAnalyzer = () => {
                 {/* Website Analysis Form content */}
                 <motion.form
                   className="relative"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSubmit();
-                  }}
+                  onSubmit={handleSubmit}
                 >
                   <motion.div
                     className="absolute -inset-0.5 bg-gradient-to-r from-[#FF6B6B] to-[#FF8F8F] 
@@ -711,6 +728,7 @@ const BusinessAnalyzer = () => {
                     {/* Submit Button */}
                     <motion.button
                       type="submit"
+                      onClick={handleSubmit}
                       disabled={isAnalyzing || !websiteUrl}
                       className="w-full relative group"
                       whileHover={{ scale: 1.02 }}
