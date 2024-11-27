@@ -3,6 +3,18 @@ import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import { Anthropic } from '@anthropic-ai/sdk';
 
+if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is missing');
+  }
+  
+  if (!process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
+    throw new Error('Invalid ANTHROPIC_API_KEY format - should start with sk-ant-');
+  }
+  
+  const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY
+  });
+
 // Single initialization of Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || ''
