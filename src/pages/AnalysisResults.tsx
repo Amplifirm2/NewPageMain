@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -9,22 +9,13 @@ import {
   CheckCircle,
   AlertTriangle,
   BarChart3,
-  ChevronDown,
   Brain,
-  Lock,
-  Shield,
   Download,
   Share2,
   Globe,
-  ArrowUpRight,
   Plus,
-  ChartPieIcon,
-  LineChart,
-  Activity,
   ArrowUp,
-  ArrowDown,
-  Zap,
-  Info
+  ArrowDown
 } from 'lucide-react';
 
 // Animated Score Ring Component
@@ -224,7 +215,7 @@ const MetricCard = ({ label, value, change, icon: Icon, color }) => (
 const AnalysisResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [] = useState('overview');
   
   const { analysis, loading, error } = location.state || {};
 

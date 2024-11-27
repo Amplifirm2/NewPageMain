@@ -50,7 +50,6 @@ interface FormErrors {
 
 
 const AgencyLanding = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const [formData, setFormData] = useState<FormData>({
     agencyName: '',
@@ -2994,3 +2993,7 @@ return (
 );
         }
 export default AgencyLanding;
+function setCompletedSteps(arg0: never[]) {
+  throw new Error('Function not implemented.');
+}
+

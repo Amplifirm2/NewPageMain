@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Brain, BarChart2, Target, PieChart } from 'lucide-react';
@@ -8,7 +8,7 @@ const AnalysisLoading = () => {
   const location = useLocation();
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   const steps = [
     { icon: Brain, text: "Analyzing Business Model", color: "#FF6B6B" },
