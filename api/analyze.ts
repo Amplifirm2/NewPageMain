@@ -15,11 +15,6 @@ if (!process.env.ANTHROPIC_API_KEY) {
     apiKey: process.env.ANTHROPIC_API_KEY
   });
 
-// Single initialization of Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || ''
-});
-
 function extractJsonFromResponse(text: string) {
   try {
     const jsonMatch = text.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
