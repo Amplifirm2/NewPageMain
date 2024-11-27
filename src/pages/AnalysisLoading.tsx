@@ -3,6 +3,14 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Brain, BarChart2, Target, PieChart } from 'lucide-react';
 
+// Move steps outside the component
+const steps = [
+  { icon: Brain, text: "Analyzing Business Model", color: "#FF6B6B" },
+  { icon: BarChart2, text: "Processing Market Data", color: "#8B5CF6" },
+  { icon: Target, text: "Evaluating Growth Potential", color: "#3B82F6" },
+  { icon: PieChart, text: "Generating Insights", color: "#EC4899" },
+];
+
 const AnalysisLoading = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -10,96 +18,85 @@ const AnalysisLoading = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [, setError] = useState<string | null>(null);
 
-  const steps = [
-    { icon: Brain, text: "Analyzing Business Model", color: "#FF6B6B" },
-    { icon: BarChart2, text: "Processing Market Data", color: "#8B5CF6" },
-    { icon: Target, text: "Evaluating Growth Potential", color: "#3B82F6" },
-    { icon: PieChart, text: "Generating Insights", color: "#EC4899" }
-  ];
-
   useEffect(() => {
-    const { analysisType, formData, websiteUrl } = location.state as { 
+    const { analysisType, formData, websiteUrl } = (location.state as { 
       analysisType?: string; 
       formData?: any; 
       websiteUrl?: string 
-    } || {};
+    }) || {};
     
     console.log('Loading page received:', { analysisType, formData, websiteUrl });
     
     let isMounted = true;
 
     const fetchAnalysis = async () => {
-      try {
-        const endpoint = analysisType === 'website' 
-          ? '/api/analyze-website'
-          : '/api/analyze-manual';
-        
-        const response = await fetch(`http://localhost:3001${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(
-            analysisType === 'website' 
-              ? { url: websiteUrl }
-              : { formData }
-          ),
-        });
-
-        if (!response.ok) {
-          throw new Error('Analysis failed');
-        }
-
-        const data = await response.json();
-        
-        if (!data.success) {
-          throw new Error(data.error || 'Analysis failed');
-        }
-
-        // Ensure we have valid analysis data
-        if (!data.analysis || typeof data.analysis !== 'object') {
-          throw new Error('Invalid analysis data received');
-        }
-
-        if (isMounted) {
-          // Wait for progress animation to complete
-          setTimeout(() => {
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(
+              analysisType === 'website' 
+                ? { url: websiteUrl }
+                : { formData }
+            ),
+          });
+      
+          if (!response.ok) {
+            throw new Error('Analysis failed');
+          }
+      
+          const data = await response.json();
+          
+          if (!data.success) {
+            throw new Error(data.error || 'Analysis failed');
+          }
+      
+          // Ensure we have valid analysis data
+          if (!data.analysis || typeof data.analysis !== 'object') {
+            throw new Error('Invalid analysis data received');
+          }
+      
+          if (isMounted) {
+            // Wait for progress animation to complete
+            setTimeout(() => {
+              navigate('/analysis-results', {
+                state: {
+                  analysis: data.analysis,
+                  loading: false,
+                  error: null,
+                },
+              });
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Analysis error:', error);
+          if (error instanceof Error) {
+            setError(error.message);
             navigate('/analysis-results', {
               state: {
-                analysis: data.analysis,
+                analysis: null,
                 loading: false,
-                error: null
-              }
+                error: error.message,
+              },
             });
-          }, 1000);
+          } else {
+            setError('An unknown error occurred');
+            navigate('/analysis-results', {
+              state: {
+                analysis: null,
+                loading: false,
+                error: 'An unknown error occurred',
+              },
+            });
+          }
         }
-      } catch (error: unknown) {
-        console.error('Analysis error:', error);
-        if (error instanceof Error) {
-          setError(error.message);
-          navigate('/analysis-results', {
-            state: {
-              analysis: null,
-              loading: false,
-              error: error.message
-            }
-          });
-        } else {
-          setError('An unknown error occurred');
-          navigate('/analysis-results', {
-            state: {
-              analysis: null,
-              loading: false,
-              error: 'An unknown error occurred'
-            }
-          });
-        }
-      }
-    };
+      };
 
     // Start progress animation
     const progressInterval = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           return 100;
@@ -110,7 +107,7 @@ const AnalysisLoading = () => {
 
     // Update current step
     const stepInterval = setInterval(() => {
-      setCurrentStep(prev => (prev < steps.length - 1 ? prev + 1 : prev));
+      setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
     }, 2000);
 
     // Start analysis
@@ -121,7 +118,7 @@ const AnalysisLoading = () => {
       clearInterval(progressInterval);
       clearInterval(stepInterval);
     };
-  }, [navigate, location, steps]);
+  }, [navigate, location.state]); // Removed `steps` from dependencies
 
   return (
     <div className="min-h-screen bg-[#13091D] flex items-center justify-center relative overflow-hidden">

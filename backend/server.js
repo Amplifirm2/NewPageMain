@@ -1,6 +1,8 @@
+// server.js
+
 import express from 'express';
 import cors from 'cors';
-import Anthropic from '@anthropic-ai/sdk';
+import { Anthropic, HUMAN_PROMPT, AI_PROMPT } from '@anthropic-ai/sdk';
 import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
@@ -21,105 +23,99 @@ const anthropic = new Anthropic({
 });
 
 function extractJsonFromResponse(text) {
-    try {
-      console.log('Raw response:', text); // Add this to debug
-  
-      // First try to extract JSON from code blocks
-      const jsonMatch = text.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
-      if (jsonMatch && jsonMatch[1]) {
-        const cleaned = jsonMatch[1].trim();
-        console.log('Extracted from code block:', cleaned);
-        return JSON.parse(cleaned);
-      }
-  
-      // Try to find a JSON object pattern
-      const jsonPattern = /\{[\s\S]*\}/;
-      const matches = text.match(jsonPattern);
-      if (matches) {
-        const cleaned = matches[0].trim();
-        console.log('Extracted using pattern:', cleaned);
-        return JSON.parse(cleaned);
-      }
-  
-      throw new Error('No JSON pattern found in response');
-    } catch (error) {
-      console.error('Error extracting JSON:', error);
-      console.error('Original text:', text);
-      throw new Error('Failed to parse analysis response');
+  try {
+    console.log('Raw response:', text);
+
+    // First try to extract JSON from code blocks
+    const jsonMatch = text.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+    if (jsonMatch && jsonMatch[1]) {
+      const cleaned = jsonMatch[1].trim();
+      console.log('Extracted from code block:', cleaned);
+      return JSON.parse(cleaned);
     }
-  }
-  
-  async function analyzeWithClaude(content) {
-    try {
-      console.log('Sending content to Claude for analysis...');
-  
-      // Create a shorter version of content
-      const optimizedContent = {
-        title: content.title?.slice(0, 100) || '',
-        description: content.description?.slice(0, 200) || '',
-        mainContent: content.mainContent?.slice(0, 500) || '',
-      };
-  
-      const message = await anthropic.messages.create({
-        model: "claude-2.1",
-        max_tokens: 500,
-        temperature: 0.1, // Reduced for more consistent output
-        system: "You are a business analyst. Always respond with pure JSON only, no explanations or markdown.",
-        messages: [{
-          role: "user",
-          content: `Return ONLY a JSON object analyzing this business. No other text or formatting. The response must be a raw JSON object matching this exact structure:
-  
-  {
-    "scores": {
-      "marketFit": <0-10>,
-      "growthPotential": <0-10>,
-      "businessModel": <0-10>,
-      "overall": <0-10>
-    },
-    "analysis": {
-      "strengths": ["<strength 1>","<strength 2>"],
-      "improvements": ["<improvement 1>","<improvement 2>"],
-      "recommendations": ["<recommendation 1>","<recommendation 2>"]
-    },
-    "marketPosition": "<brief summary>"
-  }
-  
-  Business to analyze: ${JSON.stringify(optimizedContent)}`
-        }]
-      });
-  
-      let analysisText = '';
-      if (Array.isArray(message.content)) {
-        analysisText = message.content.find(item => item.type === 'text')?.text || '';
-      } else {
-        analysisText = message.content || '';
-      }
-  
-      if (!analysisText) {
-        throw new Error('Empty response from Claude');
-      }
-  
-      console.log('Claude response:', analysisText); // Add this to debug
-  
-      const analysis = extractJsonFromResponse(analysisText);
-  
-      // Validate the analysis structure
-      if (!analysis.scores || !analysis.analysis || !analysis.marketPosition) {
-        throw new Error('Invalid analysis structure received');
-      }
-  
-      // Round scores
-      Object.keys(analysis.scores).forEach(key => {
-        analysis.scores[key] = Number(Number(analysis.scores[key]).toFixed(1));
-      });
-  
-      return analysis;
-  
-    } catch (error) {
-      console.error('Analysis error:', error);
-      throw new Error(`Analysis failed: ${error.message}`);
+
+    // Try to find a JSON object pattern
+    const jsonPattern = /\{[\s\S]*\}/;
+    const matches = text.match(jsonPattern);
+    if (matches) {
+      const cleaned = matches[0].trim();
+      console.log('Extracted using pattern:', cleaned);
+      return JSON.parse(cleaned);
     }
+
+    throw new Error('No JSON pattern found in response');
+  } catch (error) {
+    console.error('Error extracting JSON:', error);
+    console.error('Original text:', text);
+    throw new Error('Failed to parse analysis response');
   }
+}
+
+async function analyzeWithClaude(content) {
+  try {
+    console.log('Sending content to Claude for analysis...');
+
+    // Create a shorter version of content
+    const optimizedContent = {
+      title: content.title?.slice(0, 100) || '',
+      description: content.description?.slice(0, 200) || '',
+      mainContent: content.mainContent?.slice(0, 500) || '',
+    };
+
+    const anthropicPrompt = `You are a business analyst. Always respond with pure JSON only, no explanations or markdown.
+
+Return ONLY a JSON object analyzing this business. No other text or formatting. The response must be a raw JSON object matching this exact structure:
+
+{
+  "scores": {
+    "marketFit": <0-10>,
+    "growthPotential": <0-10>,
+    "businessModel": <0-10>,
+    "overall": <0-10>
+  },
+  "analysis": {
+    "strengths": ["<strength 1>", "<strength 2>"],
+    "improvements": ["<improvement 1>", "<improvement 2>"],
+    "recommendations": ["<recommendation 1>", "<recommendation 2>"]
+  },
+  "marketPosition": "<brief summary>"
+}
+
+Business to analyze: ${JSON.stringify(optimizedContent)}`;
+
+    const response = await anthropic.completions.create({
+      model: 'claude-2',
+      prompt: `${HUMAN_PROMPT} ${anthropicPrompt} ${AI_PROMPT}`,
+      max_tokens_to_sample: 500,
+      temperature: 0.1,
+    });
+
+    const analysisText = response.completion.trim();
+
+    if (!analysisText) {
+      throw new Error('Empty response from Claude');
+    }
+
+    console.log('Claude response:', analysisText);
+
+    const analysis = extractJsonFromResponse(analysisText);
+
+    // Validate the analysis structure
+    if (!analysis.scores || !analysis.analysis || !analysis.marketPosition) {
+      throw new Error('Invalid analysis structure received');
+    }
+
+    // Round scores
+    Object.keys(analysis.scores).forEach((key) => {
+      analysis.scores[key] = Number(Number(analysis.scores[key]).toFixed(1));
+    });
+
+    return analysis;
+  } catch (error) {
+    console.error('Analysis error:', error);
+    throw new Error(`Analysis failed: ${error.message}`);
+  }
+}
 
 async function scrapeWebsite(url) {
   try {
@@ -127,24 +123,22 @@ async function scrapeWebsite(url) {
     if (!response.ok) {
       throw new Error(`Failed to fetch website: ${response.statusText}`);
     }
-    
+
     const html = await response.text();
     const $ = cheerio.load(html);
 
     // Remove unnecessary elements to reduce content
-    $('script').remove();
-    $('style').remove();
-    $('noscript').remove();
-    $('footer').remove();
-    $('nav').remove();
-    $('header').remove();
+    $('script, style, noscript, footer, nav, header').remove();
 
     const content = {
-      title: $('title').text().trim() || $('h1').first().text().trim() || '',
-      description: $('meta[name="description"]').attr('content') || 
-                  $('meta[property="og:description"]').attr('content') || '',
+      title:
+        $('title').text().trim() || $('h1').first().text().trim() || '',
+      description:
+        $('meta[name="description"]').attr('content') ||
+        $('meta[property="og:description"]').attr('content') ||
+        '',
       mainContent: '',
-      services: ''
+      services: '',
     };
 
     // Get main content (limited)
@@ -156,7 +150,9 @@ async function scrapeWebsite(url) {
     content.mainContent = paragraphs.slice(0, 5).join(' '); // Only first 5 paragraphs
 
     // Get services content (limited)
-    const serviceElements = $('.service, .product, [class*="service"], [class*="product"]');
+    const serviceElements = $(
+      '.service, .product, [class*="service"], [class*="product"]'
+    );
     const services = [];
     serviceElements.each((_, el) => {
       const text = $(el).text().trim();
@@ -179,11 +175,11 @@ async function scrapeWebsite(url) {
 
 app.post('/api/analyze-website', async (req, res) => {
   const { url } = req.body;
-  
+
   if (!url) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'URL is required' 
+    return res.status(400).json({
+      success: false,
+      error: 'URL is required',
     });
   }
 
@@ -191,27 +187,27 @@ app.post('/api/analyze-website', async (req, res) => {
     console.log('Analyzing website:', url);
     const scrapedContent = await scrapeWebsite(url);
     const analysis = await analyzeWithClaude(scrapedContent);
-    
+
     res.json({
       success: true,
-      analysis
+      analysis,
     });
   } catch (error) {
     console.error('Website analysis error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
 
 app.post('/api/analyze-manual', async (req, res) => {
   const { formData } = req.body;
-  
+
   if (!formData) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Form data is required' 
+    return res.status(400).json({
+      success: false,
+      error: 'Form data is required',
     });
   }
 
@@ -219,13 +215,13 @@ app.post('/api/analyze-manual', async (req, res) => {
     const analysis = await analyzeWithClaude(formData);
     res.json({
       success: true,
-      analysis
+      analysis,
     });
   } catch (error) {
     console.error('Manual analysis error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
