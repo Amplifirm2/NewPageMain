@@ -3,17 +3,62 @@ import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import { Anthropic } from '@anthropic-ai/sdk';
 
+// Rate limiting interface
+interface RateLimitData {
+  count: number;
+  timestamp: number;
+}
+
+declare global {
+  var rateLimits: Map<string, RateLimitData>;
+}
+
 if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY environment variable is missing');
-  }
+}
   
-  if (!process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
+if (!process.env.ANTHROPIC_API_KEY.startsWith('sk-ant-')) {
     throw new Error('Invalid ANTHROPIC_API_KEY format - should start with sk-ant-');
-  }
-  
-  const anthropic = new Anthropic({
+}
+
+const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
-  });
+});
+
+const checkRateLimit = (req: VercelRequest): boolean => {
+  const userIp = req.headers['x-forwarded-for'] as string || 'unknown';
+  const rateLimit = global.rateLimits?.get(userIp);
+  const now = Date.now();
+  
+  if (!global.rateLimits) {
+    global.rateLimits = new Map();
+  }
+
+  if (!rateLimit) {
+    global.rateLimits.set(userIp, {
+      count: 1,
+      timestamp: now
+    });
+    return true;
+  }
+
+  // Reset count if 24 hours have passed
+  if (now - rateLimit.timestamp > 24 * 60 * 60 * 1000) {
+    global.rateLimits.set(userIp, {
+      count: 1,
+      timestamp: now
+    });
+    return true;
+  }
+
+  if (rateLimit.count >= 3) {
+    return false;
+  }
+
+  rateLimit.count += 1;
+  global.rateLimits.set(userIp, rateLimit);
+  return true;
+};
 
 function extractJsonFromResponse(text: string) {
   try {
@@ -94,94 +139,102 @@ Business to analyze: ${JSON.stringify(optimizedContent)}`
 }
 
 async function scrapeWebsite(url: string) {
-  try {
-    console.log('Starting website scraping:', url);
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch website: ${response.statusText}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    $('script, style, noscript, footer, nav, header').remove();
-
-    const content = {
-      title: $('title').text().trim() || $('h1').first().text().trim() || '',
-      description: $('meta[name="description"]').attr('content') ||
-                  $('meta[property="og:description"]').attr('content') || '',
-      mainContent: '',
-      services: '',
-    };
-
-    const paragraphs: string[] = [];
-    $('p').each((_, el) => {
-      const text = $(el).text().trim();
-      if (text) paragraphs.push(text);
-    });
-    content.mainContent = paragraphs.slice(0, 5).join(' ');
-
-    const serviceElements = $('.service, .product, [class*="service"], [class*="product"]');
-    const services: string[] = [];
-    serviceElements.each((_, el) => {
-      const text = $(el).text().trim();
-      if (text) services.push(text);
-    });
-    content.services = services.slice(0, 3).join(' ');
-
-    if (!content.mainContent && !content.description) {
-      throw new Error('No meaningful content found on the webpage');
-    }
-
-    console.log('Website scraping completed');
-    return content;
-  } catch (error) {
-    console.error('Scraping error:', error);
-    throw new Error(`Failed to scrape website: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('API Handler started');
-  console.log('Method:', req.method);
+    try {
+      console.log('Starting website scraping:', url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch website: ${response.statusText}`);
+      }
   
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+      const html = await response.text();
+      const $ = cheerio.load(html);
+  
+      $('script, style, noscript, footer, nav, header').remove();
+  
+      const content = {
+        title: $('title').text().trim() || $('h1').first().text().trim() || '',
+        description: $('meta[name="description"]').attr('content') ||
+                    $('meta[property="og:description"]').attr('content') || '',
+        mainContent: '',
+        services: '',
+      };
+  
+      const paragraphs: string[] = [];
+      $('p').each((_, el) => {
+        const text = $(el).text().trim();
+        if (text) paragraphs.push(text);
+      });
+      content.mainContent = paragraphs.slice(0, 5).join(' ');
+  
+      const serviceElements = $('.service, .product, [class*="service"], [class*="product"]');
+      const services: string[] = [];
+      serviceElements.each((_, el) => {
+        const text = $(el).text().trim();
+        if (text) services.push(text);
+      });
+      content.services = services.slice(0, 3).join(' ');
+  
+      if (!content.mainContent && !content.description) {
+        throw new Error('No meaningful content found on the webpage');
+      }
+  
+      console.log('Website scraping completed');
+      return content;
+    } catch (error) {
+      console.error('Scraping error:', error);
+      throw new Error(`Failed to scrape website: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
-
-  try {
-    console.log('Request body:', JSON.stringify(req.body));
-    const { url, formData } = req.body;
-
-    if (!url && !formData) {
-      return res.status(400).json({
+  
+  export default async function handler(req: VercelRequest, res: VercelResponse) {
+    console.log('API Handler started');
+    console.log('Method:', req.method);
+    
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+  
+    // Check rate limit first
+    if (!checkRateLimit(req)) {
+      return res.status(429).json({
         success: false,
-        error: 'Either URL or form data is required',
+        error: 'Analysis limit exceeded. Maximum 3 analyses allowed per day.'
       });
     }
-
-    let analysisContent;
-    if (url) {
-      console.log('Processing URL analysis');
-      analysisContent = await scrapeWebsite(url);
-    } else {
-      console.log('Processing form data analysis');
-      analysisContent = formData;
+  
+    try {
+      console.log('Request body:', JSON.stringify(req.body));
+      const { url, formData } = req.body;
+  
+      if (!url && !formData) {
+        return res.status(400).json({
+          success: false,
+          error: 'Either URL or form data is required',
+        });
+      }
+  
+      let analysisContent;
+      if (url) {
+        console.log('Processing URL analysis');
+        analysisContent = await scrapeWebsite(url);
+      } else {
+        console.log('Processing form data analysis');
+        analysisContent = formData;
+      }
+  
+      console.log('Content prepared for analysis');
+      const analysis = await analyzeWithClaude(analysisContent);
+  
+      console.log('Analysis completed successfully');
+      return res.status(200).json({
+        success: true,
+        analysis,
+      });
+    } catch (error) {
+      console.error('Handler error:', error);
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
     }
-
-    console.log('Content prepared for analysis');
-    const analysis = await analyzeWithClaude(analysisContent);
-
-    console.log('Analysis completed successfully');
-    return res.status(200).json({
-      success: true,
-      analysis,
-    });
-  } catch (error) {
-    console.error('Handler error:', error);
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'An unknown error occurred',
-    });
   }
-}

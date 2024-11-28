@@ -20,6 +20,73 @@ import {
   Info
 } from 'lucide-react';
 
+
+interface AnalysisTracking {
+  count: number;
+  lastReset: number;
+  analyses: {
+    timestamp: number;
+    type: 'website' | 'manual';
+  }[];
+}
+
+const getAnalysisTracking = (): AnalysisTracking => {
+  const tracking = localStorage.getItem('analysis_tracking');
+  if (!tracking) {
+    const initial = {
+      count: 0,
+      lastReset: Date.now(),
+      analyses: []
+    };
+    localStorage.setItem('analysis_tracking', JSON.stringify(initial));
+    return initial;
+  }
+  return JSON.parse(tracking);
+};
+
+const updateAnalysisTracking = (type: 'website' | 'manual'): { allowed: boolean; remaining: number } => {
+  const tracking = getAnalysisTracking();
+  
+  if (tracking.count >= 3) {
+    return { allowed: false, remaining: 0 };
+  }
+  
+  tracking.count += 1;
+  tracking.analyses.push({
+    timestamp: Date.now(),
+    type
+  });
+  
+  localStorage.setItem('analysis_tracking', JSON.stringify(tracking));
+  
+  return { allowed: true, remaining: 3 - tracking.count };
+};
+
+const RemainingAnalysesCount: React.FC = () => {
+  const tracking = getAnalysisTracking();
+  const remaining = 3 - tracking.count;
+
+  if (tracking.count === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-4 text-center"
+    >
+      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg 
+        ${remaining === 0 ? 'bg-red-500/10 text-red-500' : 'bg-white/5 text-white/60'}`}>
+        <Target className="w-4 h-4" />
+        {remaining === 0 ? (
+          'No more free analyses remaining'
+        ) : (
+          `${remaining} free ${remaining === 1 ? 'analysis' : 'analyses'} remaining`
+        )}
+      </div>
+    </motion.div>
+  );
+};
+
 interface FormData {
   businessDescription: string;
   businessModel: string;
@@ -157,35 +224,33 @@ const BusinessAnalyzer = () => {
     if (e) {
       e.preventDefault();
     }
+  
+    const { allowed, remaining } = updateAnalysisTracking(analysisType);
     
-    if (analysisType === 'website') {
-      if (!urlValidated) {
-        setShowUrlTooltip(true);
-        return;
-      }
+    if (!allowed) {
+      setErrors({
+        submit: 'You have reached your limit of 3 free analyses. Please try again later.'
+      });
+      return;
+    }
   
-      setIsAnalyzing(true);
-      // Navigate to loading page with website data
+    setIsAnalyzing(true);
+  
+    try {
+      // Navigate to loading page with form data and remaining count
       navigate('/analysis-loading', {
         state: {
-          analysisType: 'website',
-          websiteUrl: websiteUrl
+          analysisType,
+          formData: analysisType === 'manual' ? formData : undefined,
+          websiteUrl: analysisType === 'website' ? websiteUrl : undefined,
+          remainingAnalyses: remaining
         }
       });
-    } else {
-      // For manual input
-      if (!validateStep()) {
-        return;
-      }
-  
-      setIsAnalyzing(true);
-      // Navigate to loading page with form data
-      navigate('/analysis-loading', {
-        state: {
-          analysisType: 'manual',
-          formData: formData
-        }
+    } catch (error) {
+      setErrors({
+        submit: error instanceof Error ? error.message : 'An unknown error occurred'
       });
+      setIsAnalyzing(false);
     }
   };
 
@@ -471,6 +536,9 @@ const BusinessAnalyzer = () => {
                   </div>
                 </div>
 
+                {/* Add RemainingAnalysesCount right here */}
+                <RemainingAnalysesCount />      
+
                 {/* Question Form */}
                 <motion.div
                   className="bg-[#1F1129]/50 backdrop-blur-sm rounded-2xl p-8 border border-white/10
@@ -689,6 +757,9 @@ const BusinessAnalyzer = () => {
                         Enter your website URL and let our AI analyze your business model
                       </p>
                     </div>
+
+                    {/* Add RemainingAnalysesCount right here */}
+                    <RemainingAnalysesCount />
 
                     <div className="relative mb-6 group">
                       <motion.div
