@@ -156,7 +156,7 @@ const BusinessAnalyzer = () => {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [, setShowUrlTooltip] = useState(false);
+  const [] = useState(false);
   const [urlValidated, setUrlValidated] = useState(false);
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
